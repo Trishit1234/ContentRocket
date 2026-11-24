@@ -56,15 +56,15 @@ Open `http://localhost:5173`.
 
 All private endpoints require `Authorization: Bearer <access-token>`. Django migrations and ownership filtering protect and persist user records.
 
-## Deployment (Vercel + Render)
+## Deployment (Vercel + Render + Neon)
 
-The frontend and Django API deploy separately. The API needs a persistent PostgreSQL database for production; the local SQLite database is only for development. Check hosting plans for database persistence, sleeping services, quotas, and charges before launching.
+The frontend and Django API deploy separately. The local SQLite database is only for development. For a no-cost demo, use Vercel Free for the frontend, Render Free for Django, and Neon Free for PostgreSQL. Check current plan limits before launch: Render Free services sleep after 15 minutes without traffic, and Render Free Postgres expires after 30 days; Neon Free has usage and storage limits.
 
 1. Push the project to GitHub. Keep `backend/.env` out of Git; it contains local secrets.
-2. On Render, create a PostgreSQL database and a Python web service using `backend` as the root directory.
+2. On Neon, create a PostgreSQL project and copy its connection string. On Render, create a Python web service using `backend` as the root directory.
    - Build command: `pip install -r requirements.txt && python manage.py migrate --noinput`
    - Start command: `gunicorn config.wsgi:application --bind 0.0.0.0:$PORT`
-   - Set `DATABASE_URL` to the Render database connection string, `DEBUG=False`, a unique `SECRET_KEY`, the backend hostname in `ALLOWED_HOSTS`, and the Vercel site origin in both `CORS_ALLOWED_ORIGINS` and `CSRF_TRUSTED_ORIGINS`.
+   - Set `DATABASE_URL` to the Neon connection string, `DATABASE_SSL_REQUIRE=true`, `DEBUG=False`, a unique `SECRET_KEY`, the backend hostname in `ALLOWED_HOSTS`, and the Vercel site origin in both `CORS_ALLOWED_ORIGINS` and `CSRF_TRUSTED_ORIGINS`.
    - For hosted Gemini generation, set `AI_PROVIDER=gemini` and add `GEMINI_API_KEY` as a secret environment variable on the backend service. Do not put this key in Vercel or frontend code. Provider quotas and terms apply.
 3. On Vercel, import the same GitHub repository and set the root directory to `frontend`. Use the Vite preset, build command `npm run build`, and output directory `dist`.
 4. Add `VITE_API_BASE_URL=https://<your-render-service>.onrender.com/api` to Vercel's environment variables, replacing the host with the URL Render gives you. Redeploy after setting it.
