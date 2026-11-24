@@ -16,9 +16,11 @@ Including another URLconf
 """
 from django.contrib import admin
 from django.urls import include, path
-from .views import DashboardSummaryView
+from .views import DashboardSummaryView, HealthView
 
 urlpatterns = [
+    path('', HealthView.as_view()),
+    path('api/health/', HealthView.as_view()),
     path('admin/', admin.site.urls),
     path('api/dashboard/', DashboardSummaryView.as_view()),
     path('api/auth/', include('accounts.urls')),

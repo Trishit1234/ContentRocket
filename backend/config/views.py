@@ -1,5 +1,6 @@
 from django.utils import timezone
 from rest_framework.permissions import IsAuthenticated
+from rest_framework.permissions import AllowAny
 from rest_framework.response import Response
 from rest_framework.views import APIView
 from ai_tools.models import Caption, ContentIdea, Script
@@ -7,6 +8,16 @@ from analytics.models import ContentPerformance
 from content.models import ContentAsset
 from content_calendar.models import ContentPost
 from tasks.models import Task
+
+
+class HealthView(APIView):
+    permission_classes = (AllowAny,)
+
+    def get(self, request):
+        return Response({
+            'status': 'ok',
+            'service': 'ContentRocket API',
+        })
 
 
 class DashboardSummaryView(APIView):

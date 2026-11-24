@@ -88,42 +88,61 @@ def ollama_json(prompt, response_schema):
 
 
 def gemini_json(prompt, response_schema):
-    key = os.getenv('GEMINI_API_KEY')
-    if not key:
+    key_value = os.getenv('GEMINI_API_KEYS') or os.getenv('GEMINI_API_KEY')
+    if not key_value:
         return None, 'Gemini API key is not configured. Add GEMINI_API_KEY to backend/.env.'
-    client = genai.Client(
-        api_key=key,
-        http_options={'timeout': 30000, 'retry_options': {'attempts': 1}},
-    )
-    try:
-        interaction = client.interactions.create(
-            model=os.getenv('GEMINI_MODEL', 'gemini-3.8-flash'),
-            input=prompt,
-            store=False,
-            response_format={
-                'type': 'text',
-                'mime_type': 'application/json',
-                'schema': response_schema.model_json_schema(),
-            },
-        )
-        if not interaction.output_text:
-            return None, 'Gemini returned an empty response.'
-        return response_schema.model_validate_json(interaction.output_text).model_dump(), None
-    except (errors.APIError, InteractionAPIError) as exc:
-        status_code = getattr(exc, 'status_code', getattr(exc, 'code', None))
-        if isinstance(exc, RateLimitError) or status_code == 429:
-            return None, 'Gemini usage limit reached for this API key. Check Google AI Studio limits, wait for the quota reset, or enable a higher tier.'
-        if isinstance(exc, (AuthenticationError, PermissionDeniedError)) or status_code in (401, 403):
-            return None, 'Gemini rejected the API key. Replace GEMINI_API_KEY in backend/.env.'
-        if isinstance(exc, NotFoundError) or status_code == 404:
-            return None, 'Configured Gemini model is unavailable. Check GEMINI_MODEL and API access.'
-        if status_code == 503:
-            return None, 'Gemini is temporarily busy or at capacity. Please retry later and check your AI Studio usage limits.'
-        return None, f'Gemini request failed with HTTP {status_code or "error"}.'
-    except (ValidationError, json.JSONDecodeError):
-        return None, 'Gemini returned content in an unexpected format.'
-    finally:
-        client.close()
+
+    keys = [key.strip() for key in key_value.split(',') if key.strip()]
+    model_value = os.getenv('GEMINI_MODELS') or os.getenv('GEMINI_MODEL', 'gemini-3.8-flash')
+    models = [model.strip() for model in model_value.split(',') if model.strip()]
+    rate_limited = False
+    last_error = None
+
+    for key in keys:
+        for model in models:
+            client = genai.Client(
+                api_key=key,
+                http_options={'timeout': 30000, 'retry_options': {'attempts': 1}},
+            )
+            try:
+                interaction = client.interactions.create(
+                    model=model,
+                    input=prompt,
+                    store=False,
+                    response_format={
+                        'type': 'text',
+                        'mime_type': 'application/json',
+                        'schema': response_schema.model_json_schema(),
+                    },
+                )
+                if not interaction.output_text:
+                    last_error = 'Gemini returned an empty response.'
+                    continue
+                return response_schema.model_validate_json(interaction.output_text).model_dump(), None
+            except (errors.APIError, InteractionAPIError) as exc:
+                status_code = getattr(exc, 'status_code', getattr(exc, 'code', None))
+                if isinstance(exc, RateLimitError) or status_code == 429:
+                    rate_limited = True
+                    last_error = 'Gemini usage limit reached for this API key. Trying the next configured key or model.'
+                    continue
+                if isinstance(exc, (AuthenticationError, PermissionDeniedError)) or status_code in (401, 403):
+                    last_error = 'Gemini rejected an API key. Replace GEMINI_API_KEY or GEMINI_API_KEYS in Render.'
+                    continue
+                if isinstance(exc, NotFoundError) or status_code == 404:
+                    last_error = f'Gemini model "{model}" is unavailable. Trying the next configured model.'
+                    continue
+                if status_code == 503:
+                    last_error = 'Gemini is temporarily busy or at capacity. Trying the next configured model.'
+                    continue
+                last_error = f'Gemini request failed with HTTP {status_code or "error"}.'
+            except (ValidationError, json.JSONDecodeError):
+                last_error = 'Gemini returned content in an unexpected format.'
+            finally:
+                client.close()
+
+    if rate_limited:
+        return None, 'All configured Gemini keys/models have reached usage limits. Add another key or enable paid quota.'
+    return None, last_error or 'Gemini request failed.'
 
 
 def generate_ai_json(prompt, response_schema):
