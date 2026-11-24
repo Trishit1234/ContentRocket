@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react'
+import { Link } from 'react-router-dom'
 import { Copy, Sparkles, Save } from 'lucide-react'
 import { api } from '../services/api'
 
@@ -18,7 +19,7 @@ const initialForm = {
   additional_instructions: '',
 }
 
-export default function AIStudio({ kind = 'idea' }) {
+export default function AIStudio({ kind = 'idea', publicMode = false }) {
   const [form, setForm] = useState(initialForm)
   const [data, setData] = useState(null)
   const [error, setError] = useState('')
@@ -27,6 +28,7 @@ export default function AIStudio({ kind = 'idea' }) {
   const [saving, setSaving] = useState(false)
 
   useEffect(() => {
+    if (publicMode) return
     api.get('/creators/profile/').then((response) => {
       const profile = response.data.results?.[0] || response.data[0]
       if (!profile) return
@@ -37,7 +39,7 @@ export default function AIStudio({ kind = 'idea' }) {
         tone: profile.preferred_tone || current.tone,
       }))
     }).catch(() => {})
-  }, [])
+  }, [publicMode])
 
   const update = (key, value) => {
     setForm((current) => ({ ...current, [key]: value }))
@@ -108,13 +110,21 @@ export default function AIStudio({ kind = 'idea' }) {
     <>
       <div className="page-heading">
         <div>
-          <p className="date-label">AI WORKSPACE</p>
+          <p className="date-label">{publicMode ? 'AI GENERATOR · NO SIGN-IN REQUIRED' : 'AI WORKSPACE'}</p>
           <h1>{kind === 'script' ? 'AI Script Writer' : kind === 'caption' ? 'Caption & Hashtag Generator' : 'AI Content Studio'}</h1>
         </div>
-        <button className="btn primary" onClick={save} disabled={!data || saving}>
-          <Save size={16} />{saving ? 'Saving...' : 'Save'}
-        </button>
+        {publicMode
+          ? <Link className="btn ghost" to="/register">Sign up to save</Link>
+          : <button className="btn primary" onClick={save} disabled={!data || saving}>
+            <Save size={16} />{saving ? 'Saving...' : 'Save'}
+          </button>}
       </div>
+      {publicMode && <nav className="public-tool-nav" aria-label="AI generators">
+        <Link className="btn ghost" to="/">Home</Link>
+        <Link className={kind === 'idea' ? 'btn primary' : 'btn ghost'} to="/generate">Ideas</Link>
+        <Link className={kind === 'script' ? 'btn primary' : 'btn ghost'} to="/generate/scripts">Scripts</Link>
+        <Link className={kind === 'caption' ? 'btn primary' : 'btn ghost'} to="/generate/captions">Captions</Link>
+      </nav>}
       <div className="studio-grid">
         <section className="card studio-controls">
           <div className="card-header"><h2>Generation details</h2></div>

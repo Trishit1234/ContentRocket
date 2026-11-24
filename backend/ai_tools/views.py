@@ -17,7 +17,8 @@ from google.genai._interactions import (
 from pydantic import BaseModel, ValidationError
 from rest_framework import viewsets, status
 from rest_framework.decorators import action
-from rest_framework.throttling import ScopedRateThrottle
+from rest_framework.permissions import AllowAny
+from rest_framework.throttling import AnonRateThrottle, ScopedRateThrottle
 from rest_framework.response import Response
 from .models import ContentIdea, Script, Caption
 from .serializers import (
@@ -161,7 +162,8 @@ class OwnedViewSet(viewsets.ModelViewSet):
 class IdeaViewSet(OwnedViewSet):
     queryset=ContentIdea.objects.all()
     serializer_class=ContentIdeaSerializer
-    @action(detail=False,methods=['post'],throttle_classes=[ScopedRateThrottle])
+    throttle_scope='ai_generation'
+    @action(detail=False,methods=['post'],permission_classes=[AllowAny],throttle_classes=[AnonRateThrottle,ScopedRateThrottle])
     def generate(self,request):
         input_serializer=IdeaGenerationInputSerializer(data=request.data)
         input_serializer.is_valid(raise_exception=True)
@@ -176,7 +178,8 @@ class IdeaViewSet(OwnedViewSet):
 class ScriptViewSet(OwnedViewSet):
     queryset=Script.objects.all()
     serializer_class=ScriptSerializer
-    @action(detail=False,methods=['post'],throttle_classes=[ScopedRateThrottle])
+    throttle_scope='ai_generation'
+    @action(detail=False,methods=['post'],permission_classes=[AllowAny],throttle_classes=[AnonRateThrottle,ScopedRateThrottle])
     def generate(self,request):
         input_serializer=ScriptGenerationInputSerializer(data=request.data)
         input_serializer.is_valid(raise_exception=True)
@@ -191,7 +194,8 @@ class ScriptViewSet(OwnedViewSet):
 class CaptionViewSet(OwnedViewSet):
     queryset=Caption.objects.all()
     serializer_class=CaptionSerializer
-    @action(detail=False,methods=['post'],throttle_classes=[ScopedRateThrottle])
+    throttle_scope='ai_generation'
+    @action(detail=False,methods=['post'],permission_classes=[AllowAny],throttle_classes=[AnonRateThrottle,ScopedRateThrottle])
     def generate(self,request):
         input_serializer=CaptionGenerationInputSerializer(data=request.data)
         input_serializer.is_valid(raise_exception=True)

@@ -22,6 +22,9 @@ export default function App() {
         <Route path="/login" element={<Auth mode="login" />} />
         <Route path="/register" element={<Auth mode="register" />} />
         <Route path="/forgot-password" element={<Auth mode="forgot" />} />
+        <Route path="/generate" element={<AIStudio publicMode />} />
+        <Route path="/generate/scripts" element={<AIStudio kind="script" publicMode />} />
+        <Route path="/generate/captions" element={<AIStudio kind="caption" publicMode />} />
         <Route path="/onboarding" element={<Protected><Onboarding /></Protected>} />
         <Route path="/app" element={<Protected><AppLayout /></Protected>}>
           <Route index element={<Dashboard />} />

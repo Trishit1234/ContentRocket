@@ -2,7 +2,9 @@ import json
 import os
 from unittest.mock import patch
 from django.contrib.auth.models import User
+from django.core.cache import cache
 from rest_framework.test import APITestCase
+from rest_framework.throttling import AnonRateThrottle
 from urllib.error import URLError
 from .views import IdeasOutput, gemini_json, ollama_json
 
@@ -73,6 +75,56 @@ class AIGenerationTests(APITestCase):
 
         self.assertEqual(response.status_code, 200)
         self.assertEqual(response.data['calls_to_action'], ['Save this for practice.'])
+
+    @patch('ai_tools.views.generate_ai_json')
+    def test_anonymous_visitors_can_generate_but_cannot_access_saved_ideas(self, generate):
+        generate.return_value = ({
+            'ideas': [{
+                'title': 'A guitar warm-up',
+                'idea': 'Show three easy warm-ups.',
+                'hook': 'Tune up in one minute.',
+                'description': 'A beginner-friendly warm-up.',
+                'format': 'Reel',
+                'target_audience': 'New guitarists',
+                'call_to_action': 'Save this routine.',
+            }],
+        }, None)
+        self.client.force_authenticate(user=None)
+
+        response = self.client.post('/api/ideas/generate/', {
+            'topic': 'Beginner guitar warm-ups',
+            'platform': 'Instagram',
+            'number': 1,
+        }, format='json')
+        saved_ideas_response = self.client.get('/api/ideas/')
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(saved_ideas_response.status_code, 401)
+
+    @patch('ai_tools.views.generate_ai_json')
+    def test_anonymous_generation_is_rate_limited(self, generate):
+        generate.return_value = ({
+            'ideas': [{
+                'title': 'A guitar warm-up',
+                'idea': 'Show three easy warm-ups.',
+                'hook': 'Tune up in one minute.',
+                'description': 'A beginner-friendly warm-up.',
+                'format': 'Reel',
+                'target_audience': 'New guitarists',
+                'call_to_action': 'Save this routine.',
+            }],
+        }, None)
+        self.client.force_authenticate(user=None)
+        cache.clear()
+
+        payload = {'topic': 'Beginner guitar warm-ups', 'platform': 'Instagram', 'number': 1}
+        with patch.dict(AnonRateThrottle.THROTTLE_RATES, {'anon': '1/hour'}):
+            first_response = self.client.post('/api/ideas/generate/', payload, format='json')
+            second_response = self.client.post('/api/ideas/generate/', payload, format='json')
+
+        self.assertEqual(first_response.status_code, 200)
+        self.assertEqual(second_response.status_code, 429)
+        cache.clear()
 
     @patch('ai_tools.views.generate_ai_json')
     def test_invalid_idea_count_is_rejected_without_calling_gemini(self, generate):
