@@ -97,6 +97,11 @@ def gemini_json(prompt, response_schema):
     keys = [key.strip() for key in key_value.split(',') if key.strip()]
     model_value = os.getenv('GEMINI_MODELS') or os.getenv('GEMINI_MODEL', 'gemini-3.8-flash')
     models = [model.strip() for model in model_value.split(',') if model.strip()]
+    # Keep older deployment settings from pinning generation to a model that
+    # Google no longer offers to new projects. Try current models as fallback.
+    for fallback_model in ('gemini-3.8-flash', 'gemini-3.5-flash-lite'):
+        if fallback_model not in models:
+            models.append(fallback_model)
     rate_limited = False
     last_error = None
 
