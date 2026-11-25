@@ -1,6 +1,5 @@
 from django.utils import timezone
-from rest_framework.permissions import IsAuthenticated
-from rest_framework.permissions import AllowAny
+from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.views import APIView
 from ai_tools.models import Caption, ContentIdea, Script
@@ -14,10 +13,7 @@ class HealthView(APIView):
     permission_classes = (AllowAny,)
 
     def get(self, request):
-        return Response({
-            'status': 'ok',
-            'service': 'ContentRocket API',
-        })
+        return Response({'status': 'ok', 'service': 'ContentRocket API'})
 
 
 class DashboardSummaryView(APIView):
@@ -36,6 +32,15 @@ class DashboardSummaryView(APIView):
             + posts.count()
         )
         recent_posts = posts.order_by('-updated_at')[:5]
+        recent_assets = ContentAsset.objects.filter(user=user).order_by('-updated_at')[:5]
+        recent_content = [
+            (post.updated_at, {'id': f'post-{post.id}', 'title': post.title, 'platform': post.platform, 'status': post.status, 'path': '/app/calendar'})
+            for post in recent_posts
+        ] + [
+            (asset.updated_at, {'id': f'asset-{asset.id}', 'title': asset.title, 'platform': asset.category or 'Saved content', 'status': asset.asset_type, 'path': '/app/library'})
+            for asset in recent_assets
+        ]
+        recent_content.sort(key=lambda entry: entry[0], reverse=True)
         upcoming_posts = upcoming[:5]
         performance = ContentPerformance.objects.filter(user=user)
         return Response({
@@ -43,10 +48,7 @@ class DashboardSummaryView(APIView):
             'upcoming_posts': upcoming.count(),
             'completed_tasks': Task.objects.filter(user=user, status='Completed').count(),
             'total_views': sum(performance.values_list('views', flat=True)),
-            'recent_content': [
-                {'id': post.id, 'title': post.title, 'platform': post.platform, 'status': post.status}
-                for post in recent_posts
-            ],
+            'recent_content': [item for _, item in recent_content[:5]],
             'upcoming_deadlines': [
                 {'id': post.id, 'title': post.title, 'date': post.scheduled_date}
                 for post in upcoming_posts

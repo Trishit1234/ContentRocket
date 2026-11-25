@@ -3,6 +3,7 @@
 # Create your views here.
 import os
 import json
+from django.conf import settings
 from urllib.error import HTTPError, URLError
 from urllib.request import Request, urlopen
 from google import genai
@@ -135,6 +136,9 @@ def gemini_json(prompt, response_schema):
                 if status_code == 503:
                     last_error = 'Gemini is temporarily busy or at capacity. Trying the next configured model.'
                     continue
+                if status_code is None:
+                    last_error = 'The hosted backend could not connect to Gemini. Check outbound HTTPS access and its server-side Gemini API key.'
+                    continue
                 last_error = f'Gemini request failed with HTTP {status_code or "error"}.'
             except (ValidationError, json.JSONDecodeError):
                 last_error = 'Gemini returned content in an unexpected format.'
@@ -142,12 +146,12 @@ def gemini_json(prompt, response_schema):
                 client.close()
 
     if rate_limited:
-        return None, 'All configured Gemini keys/models have reached usage limits. Add another key or enable paid quota.'
+        return None, 'All configured Gemini keys/models have reached usage limits. Add a Gemini key with available quota to the hosted backend GEMINI_API_KEYS or GEMINI_API_KEY secret, or wait for quota to reset. Keep keys server-side.'
     return None, last_error or 'Gemini request failed.'
 
 
 def generate_ai_json(prompt, response_schema):
-    provider = os.getenv('AI_PROVIDER', 'ollama').lower()
+    provider = os.getenv('AI_PROVIDER', 'ollama' if settings.DEBUG else 'gemini').lower()
     if provider == 'ollama':
         return ollama_json(prompt, response_schema)
     if provider == 'gemini':

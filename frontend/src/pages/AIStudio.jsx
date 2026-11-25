@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { Copy, Sparkles, Save } from 'lucide-react'
-import { api } from '../services/api'
+import { api, apiIsConfigured } from '../services/api'
 
 const initialForm = {
   niche: '',
@@ -61,7 +61,9 @@ export default function AIStudio({ kind = 'idea', publicMode = false }) {
       const response = await api.post(endpoint, form)
       setData(response.data)
     } catch (e) {
-      setError(e.response?.data?.detail || e.response?.data?.topic?.[0] || 'Could not generate content. Check your connection and try again.')
+      setError(e.response?.data?.detail || e.response?.data?.topic?.[0] || (!apiIsConfigured
+        ? 'AI is not connected on this deployment yet. Set VITE_API_BASE_URL to your hosted Django API, then redeploy the frontend.'
+        : 'Could not generate content. Check your connection and try again.'))
     } finally {
       setLoading(false)
     }
@@ -73,22 +75,15 @@ export default function AIStudio({ kind = 'idea', publicMode = false }) {
     setError('')
     setNotice('')
     try {
+      let assets = []
       if (kind === 'idea') {
-        await Promise.all((data.ideas || []).map((idea) => api.post('/ideas/', {
-          title: idea.title,
-          idea: idea.idea,
-          hook: idea.hook,
-          description: idea.description,
-          format: idea.format,
-          platform: form.platform,
-          target_audience: idea.target_audience || form.target_audience,
-          call_to_action: idea.call_to_action,
-        })))
+        assets = (data.ideas || []).map((idea) => ({ title: idea.title || form.topic, asset_type: 'idea', body: JSON.stringify(idea, null, 2), category: form.platform }))
       } else if (kind === 'script') {
-        await api.post('/scripts/', { title: data.title, content: data, platform: form.platform, topic: form.topic })
+        assets = [{ title: data.title || form.topic, asset_type: 'script', body: JSON.stringify(data, null, 2), category: form.platform }]
       } else {
-        await api.post('/captions/', { topic: form.topic, captions: data.captions, hashtags: data.hashtags, calls_to_action: data.calls_to_action, hooks: data.hooks })
+        assets = [{ title: form.topic, asset_type: 'caption', body: JSON.stringify(data, null, 2), category: form.platform }]
       }
+      await Promise.all(assets.map((asset) => api.post('/content/assets/', asset)))
       setNotice('Saved to your content library.')
     } catch (e) {
       setError(e.response?.data?.detail || 'Could not save this content.')
@@ -99,7 +94,12 @@ export default function AIStudio({ kind = 'idea', publicMode = false }) {
 
   const copy = async () => {
     try {
-      await navigator.clipboard.writeText(JSON.stringify(data, null, 2))
+      const text = kind === 'idea'
+        ? (data.ideas || []).map((idea) => [idea.title, idea.idea, `Hook: ${idea.hook}`, `Format: ${idea.format}`, idea.description, `Call to action: ${idea.call_to_action}`].filter(Boolean).join('\n')).join('\n\n---\n\n')
+        : kind === 'script'
+          ? [data.title, `Opening hook: ${data.opening_hook}`, data.introduction, data.main_content, ...(data.scene_suggestions || []).map((scene) => `Scene: ${scene}`), data.dialogue_or_narration, data.closing, `Call to action: ${data.call_to_action}`].filter(Boolean).join('\n\n')
+          : [['Captions', data.captions], ['Hashtags', data.hashtags], ['Calls to action', data.calls_to_action], ['Alternative hooks', data.hooks]].map(([label, values]) => `${label}\n${(values || []).join('\n')}`).join('\n\n')
+      await navigator.clipboard.writeText(text)
       setNotice('Copied to clipboard.')
     } catch {
       setError('Clipboard access is unavailable in this browser.')

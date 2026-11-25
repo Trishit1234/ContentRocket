@@ -1,7 +1,12 @@
 import axios from 'axios'
 
+const configuredApiBaseUrl = import.meta.env.VITE_API_BASE_URL?.trim()
+export const apiIsConfigured = import.meta.env.DEV || Boolean(configuredApiBaseUrl)
+
 export const api = axios.create({
-  baseURL: import.meta.env.VITE_API_BASE_URL || 'http://127.0.0.1:8000/api',
+  // Only local development may fall back to localhost. Production deployments
+  // must point at the shared hosted Django API via VITE_API_BASE_URL.
+  baseURL: configuredApiBaseUrl || (import.meta.env.DEV ? 'http://127.0.0.1:8000/api' : '/api'),
 })
 
 api.interceptors.request.use((config) => {
