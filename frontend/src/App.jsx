@@ -8,6 +8,7 @@ const Auth = lazy(() => import('./pages/Auth'))
 const Onboarding = lazy(() => import('./pages/Onboarding'))
 const Dashboard = lazy(() => import('./pages/Dashboard'))
 const AIStudio = lazy(() => import('./pages/AIStudio'))
+const CampaignDemo = lazy(() => import('./pages/CampaignDemo'))
 const AppLayout = lazy(() => import('./layouts/AppLayout'))
 const CalendarPage = lazy(() => import('./pages/WorkspacePages').then((module) => ({ default: module.CalendarPage })))
 const LibraryPage = lazy(() => import('./pages/WorkspacePages').then((module) => ({ default: module.LibraryPage })))
@@ -35,6 +36,7 @@ export default function App() {
         <Route path="/generate" element={<AIStudio publicMode />} />
         <Route path="/generate/scripts" element={<AIStudio kind="script" publicMode />} />
         <Route path="/generate/captions" element={<AIStudio kind="caption" publicMode />} />
+        <Route path="/demo" element={<CampaignDemo />} />
         <Route path="/onboarding" element={<Protected><Onboarding /></Protected>} />
         <Route path="/app" element={<Protected><AppLayout /></Protected>}>
           <Route index element={<Dashboard />} />

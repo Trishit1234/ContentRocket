@@ -1,4 +1,4 @@
-import { ArrowRight, BarChart3, CalendarDays, Sparkles, Clapperboard, WandSparkles, TrendingUp, Users, Lightbulb, HeartHandshake, CircleHelp, Mail, CheckCircle2 } from 'lucide-react'
+import { ArrowRight, BarChart3, CalendarDays, Sparkles, Clapperboard, WandSparkles, TrendingUp, Users, Lightbulb, HeartHandshake, CircleHelp, Mail, CheckCircle2, Play } from 'lucide-react'
 import { Link } from 'react-router-dom'
 import CreatorVideoBackground from '../components/CreatorVideoBackground'
 
@@ -18,7 +18,7 @@ export default function Landing() {
         <div className="eyebrow"><Sparkles size={14}/> Your complete creator workspace</div>
         <h1>Your next big idea, <span>starts here.</span></h1>
         <p>Plan your posts, shape your ideas with AI, and keep every part of your creator business moving in one place.</p>
-        <div className="hero-actions"><Link className="btn primary large" to="/register">Get Started <ArrowRight size={17}/></Link><Link className="btn ghost large" to="/generate">Try AI Generator</Link><a className="btn ghost large" href="#features">Explore Features</a></div>
+        <div className="hero-actions"><Link className="btn primary large" to="/register">Get Started <ArrowRight size={17}/></Link><Link className="btn ghost large" to="/generate">Try AI Generator</Link><Link className="btn ghost large" to="/demo"><Play size={15}/> Open live demo</Link><a className="btn ghost large" href="#features">Explore Features</a></div>
         <div className="preview">
           <aside><div className="brand mini">Content<span>Rocket</span></div>{['Overview','AI Studio','Calendar','Analytics'].map((x,i)=><div className={i===0?'preview-row active':'preview-row'} key={x}>{x}</div>)}</aside>
           <div className="preview-main"><div className="demo-label">SAMPLE DASHBOARD PREVIEW</div><div className="preview-title">Good morning, Maya</div><div className="preview-grid"><div><small>Content pieces</small><strong>24</strong></div><div><small>Scheduled</small><strong>8</strong></div><div><small>Tasks completed</small><strong>12</strong></div></div><div className="chart-preview"><div className="chart-bars">{[35,55,42,68,62,82,74].map((h,i)=><i style={{height:`${h}%`}} key={i}/>)}</div></div></div>
