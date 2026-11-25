@@ -1,12 +1,14 @@
 import axios from 'axios'
 
 const configuredApiBaseUrl = import.meta.env.VITE_API_BASE_URL?.trim()
-export const apiIsConfigured = import.meta.env.DEV || Boolean(configuredApiBaseUrl)
+const hostedApiBaseUrl = 'https://contentrocket.onrender.com/api'
+const apiBaseUrl = configuredApiBaseUrl || (import.meta.env.DEV ? 'http://127.0.0.1:8000/api' : hostedApiBaseUrl)
+export const apiIsConfigured = Boolean(apiBaseUrl)
 
 export const api = axios.create({
   // Only local development may fall back to localhost. Production deployments
-  // must point at the shared hosted Django API via VITE_API_BASE_URL.
-  baseURL: configuredApiBaseUrl || (import.meta.env.DEV ? 'http://127.0.0.1:8000/api' : '/api'),
+  // uses the shared hosted Django API unless the deployment overrides it.
+  baseURL: apiBaseUrl,
 })
 
 api.interceptors.request.use((config) => {
